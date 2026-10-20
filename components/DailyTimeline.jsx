@@ -7,10 +7,10 @@ const WINDOW_START_H = 6;
 const WINDOW_END_H   = 18;
 const WINDOW_H       = WINDOW_END_H - WINDOW_START_H; // 12h
 
-const COL_W   = 52;
-const COL_H   = 240;
-const TIME_W  = 32;
+const COL_W   = 28;
+const TIME_W  = 28;
 const HEAD_H  = 58; // month + day-initial + date
+// COL_H is dynamic — fills remaining viewport height
 
 const FEED_COLOR = { latch: '#f472b6', formula: '#fbbf24', breast: '#93c5fd' };
 
@@ -48,7 +48,7 @@ export default function DailyTimeline({ timeline, calDates }) {
         <div style={{ width: TIME_W, flexShrink: 0 }}>
           {/* blank space above to align with column headers */}
           <div style={{ height: HEAD_H }} />
-          <div style={{ position: 'relative', height: COL_H }}>
+          <div style={{ position: 'relative', height: 'calc(100svh - 195px)', minHeight: 180 }}>
             {TIME_LABELS.map(({ h, label }) => (
               <div key={h} style={{
                 position:  'absolute',
@@ -119,7 +119,7 @@ export default function DailyTimeline({ timeline, calDates }) {
           </div>
 
           {/* Time strips */}
-          <div style={{ display: 'flex', position: 'relative', height: COL_H }}>
+          <div style={{ display: 'flex', position: 'relative', height: 'calc(100svh - 195px)', minHeight: 180 }}>
             {/* Horizontal grid lines */}
             {TIME_LABELS.map(({ h }) => (
               <div key={h} style={{
@@ -150,7 +150,7 @@ function DayColumn({ day }) {
   return (
     <div style={{
       width:           COL_W,
-      height:          COL_H,
+      height:          '100%',
       position:        'relative',
       backgroundColor: '#0f172a',
       borderLeft:      '1px solid #1e293b',
@@ -169,8 +169,8 @@ function DayColumn({ day }) {
             position:        'absolute',
             top:             `${top}%`,
             height:          `${Math.max(0, bottom - top)}%`,
-            left:            5,
-            right:           5,
+            left:            3,
+            right:           3,
             backgroundColor: '#6366f1',
             borderRadius:    3,
             opacity:         0.85,
