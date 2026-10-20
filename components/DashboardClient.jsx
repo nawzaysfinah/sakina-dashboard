@@ -73,8 +73,8 @@ export default function DashboardClient({ events, babyName }) {
         ))}
       </div>
 
-      {/* Chart area */}
-      <div className="px-4 sm:px-8 py-6">
+      {/* Chart area — timeline gets no vertical padding so it can fill to the viewport edge */}
+      <div className={tab === 'timeline' ? 'px-4 sm:px-8 pt-4' : 'px-4 sm:px-8 py-6'}>
         {tab === 'timeline' && <DailyTimeline timeline={processed.timeline} calDates={processed.calDates} />}
         {tab === 'heatmap'  && <SleepHeatmap  heatmap={processed.heatmap}   rowDates={processed.rowDates} />}
         {tab === 'weekly'   && <WeeklyTotals  weeks={processed.weekly} />}

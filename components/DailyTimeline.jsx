@@ -3,14 +3,15 @@
 // Each day = one vertical column, time runs top (6am) → bottom (6pm).
 // Scroll horizontally; oldest day on the left.
 
+import { useState, useEffect, useRef } from 'react';
+
 const WINDOW_START_H = 6;
 const WINDOW_END_H   = 18;
 const WINDOW_H       = WINDOW_END_H - WINDOW_START_H; // 12h
 
-const COL_W   = 28;
-const TIME_W  = 28;
-const HEAD_H  = 58; // month + day-initial + date
-// COL_H is dynamic — fills remaining viewport height
+const COL_W  = 28;
+const TIME_W = 28;
+const HEAD_H = 58; // month row (18) + day row (40)
 
 const FEED_COLOR = { latch: '#f472b6', formula: '#fbbf24', breast: '#93c5fd' };
 
@@ -29,9 +30,24 @@ function toWindowFrac(frac24) {
 }
 
 export default function DailyTimeline({ timeline, calDates }) {
+  const wrapperRef = useRef(null);
+  const [stripsH, setStripsH] = useState(400);
+
+  useEffect(() => {
+    const update = () => {
+      if (!wrapperRef.current) return;
+      const top = wrapperRef.current.getBoundingClientRect().top;
+      // Available height from component top → viewport bottom, minus header rows and a small margin
+      setStripsH(Math.max(150, window.innerHeight - top - HEAD_H - 12));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   const sorted = [...calDates].sort(); // oldest → left
 
-  // Group consecutive days by month for the overarching label
+  // Group consecutive days by month
   const monthGroups = [];
   sorted.forEach(d => {
     const month = d.slice(0, 7);
@@ -41,22 +57,21 @@ export default function DailyTimeline({ timeline, calDates }) {
   });
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
+    <div ref={wrapperRef} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
       <div style={{ display: 'inline-flex', minWidth: TIME_W + sorted.length * COL_W }}>
 
         {/* ── Y-axis time labels ── */}
         <div style={{ width: TIME_W, flexShrink: 0 }}>
-          {/* blank space above to align with column headers */}
           <div style={{ height: HEAD_H }} />
-          <div style={{ position: 'relative', height: 'calc(100svh - 195px)', minHeight: 180 }}>
+          <div style={{ position: 'relative', height: stripsH }}>
             {TIME_LABELS.map(({ h, label }) => (
               <div key={h} style={{
-                position:  'absolute',
-                top:       `${((h - WINDOW_START_H) / WINDOW_H) * 100}%`,
-                right:     6,
-                transform: 'translateY(-50%)',
-                fontSize:  9,
-                color:     '#475569',
+                position:   'absolute',
+                top:        `${((h - WINDOW_START_H) / WINDOW_H) * 100}%`,
+                right:      6,
+                transform:  'translateY(-50%)',
+                fontSize:   9,
+                color:      '#475569',
                 whiteSpace: 'nowrap',
               }}>
                 {label}
@@ -76,15 +91,15 @@ export default function DailyTimeline({ timeline, calDates }) {
                 .toLocaleDateString('en', { month: 'short', timeZone: 'UTC' });
               return (
                 <div key={month} style={{
-                  width:       count * COL_W,
-                  fontSize:    9,
-                  fontWeight:  700,
-                  color:       '#64748b',
+                  width:         count * COL_W,
+                  fontSize:      9,
+                  fontWeight:    700,
+                  color:         '#64748b',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  paddingLeft: 4,
-                  borderLeft:  '1px solid #334155',
-                  lineHeight:  '18px',
+                  paddingLeft:   4,
+                  borderLeft:    '1px solid #334155',
+                  lineHeight:    '18px',
                 }}>
                   {label}
                 </div>
@@ -119,7 +134,7 @@ export default function DailyTimeline({ timeline, calDates }) {
           </div>
 
           {/* Time strips */}
-          <div style={{ display: 'flex', position: 'relative', height: 'calc(100svh - 195px)', minHeight: 180 }}>
+          <div style={{ display: 'flex', position: 'relative', height: stripsH }}>
             {/* Horizontal grid lines */}
             {TIME_LABELS.map(({ h }) => (
               <div key={h} style={{
