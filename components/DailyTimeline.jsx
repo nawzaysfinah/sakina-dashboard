@@ -6,22 +6,35 @@
 import { useState, useEffect, useRef } from 'react';
 
 const WINDOW_START_H = 6;
-const WINDOW_END_H   = 18;
-const WINDOW_H       = WINDOW_END_H - WINDOW_START_H; // 12h
+const WINDOW_END_H   = 30;  // 6am next day
+const WINDOW_H       = WINDOW_END_H - WINDOW_START_H; // 24h
 
 const COL_W  = 28;
-const TIME_W = 28;
+const TIME_W = 32;
 const HEAD_H = 58; // month row (18) + day row (40)
 
 const FEED_COLOR = { latch: '#f472b6', formula: '#fbbf24', breast: '#93c5fd' };
 
 const TIME_LABELS = [
-  { h: 6,  label: '6a'  },
-  { h: 9,  label: '9a'  },
-  { h: 12, label: '12p' },
-  { h: 15, label: '3p'  },
-  { h: 18, label: '6p'  },
+  { h: 6,  label: '6a',  midnight: false },
+  { h: 9,  label: '9a',  midnight: false },
+  { h: 12, label: '12p', midnight: false },
+  { h: 15, label: '3p',  midnight: false },
+  { h: 18, label: '6p',  midnight: false },
+  { h: 21, label: '9p',  midnight: false },
+  { h: 24, label: '12a', midnight: true  },
+  { h: 27, label: '3a',  midnight: false },
+  { h: 30, label: '6a',  midnight: false },
 ];
+
+// Next SGT calendar date
+function nextDate(d) {
+  const dt = new Date(d + 'T00:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() + 1);
+  return dt.toISOString().slice(0, 10);
+}
+
+const DAY_FRAC = 6 / 24; // 6am as fraction of midnight-day
 
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -64,14 +77,15 @@ export default function DailyTimeline({ timeline, calDates }) {
         <div style={{ width: TIME_W, flexShrink: 0 }}>
           <div style={{ height: HEAD_H }} />
           <div style={{ position: 'relative', height: stripsH }}>
-            {TIME_LABELS.map(({ h, label }) => (
+            {TIME_LABELS.map(({ h, label, midnight }) => (
               <div key={h} style={{
                 position:   'absolute',
                 top:        `${((h - WINDOW_START_H) / WINDOW_H) * 100}%`,
                 right:      6,
                 transform:  'translateY(-50%)',
                 fontSize:   9,
-                color:      '#475569',
+                color:      midnight ? '#64748b' : '#475569',
+                fontWeight: midnight ? 700 : 400,
                 whiteSpace: 'nowrap',
               }}>
                 {label}
@@ -135,25 +149,44 @@ export default function DailyTimeline({ timeline, calDates }) {
 
           {/* Time strips */}
           <div style={{ display: 'flex', position: 'relative', height: stripsH }}>
-            {/* Horizontal grid lines */}
-            {TIME_LABELS.map(({ h }) => (
+            {/* Horizontal grid lines — midnight line is brighter */}
+            {TIME_LABELS.map(({ h, midnight }) => (
               <div key={h} style={{
                 position:        'absolute',
                 left:            0,
                 right:           0,
                 top:             `${((h - WINDOW_START_H) / WINDOW_H) * 100}%`,
-                height:          1,
-                backgroundColor: '#1e293b',
+                height:          midnight ? 1 : 1,
+                backgroundColor: midnight ? '#334155' : '#1e293b',
                 pointerEvents:   'none',
               }} />
             ))}
 
-            {sorted.map(d => (
-              <DayColumn
-                key={d}
-                day={timeline[d] || { sleepBlocks: [], feeds: [], diapers: [] }}
-              />
-            ))}
+            {sorted.map(d => {
+              const nd  = nextDate(d);
+              const day = timeline[d]  || { sleepBlocks: [], feeds: [], diapers: [] };
+              const nxt = timeline[nd] || { sleepBlocks: [], feeds: [], diapers: [] };
+
+              // Composite: current day from 6am onward + next day before 6am (fracs shifted +1)
+              const combined = {
+                sleepBlocks: [
+                  ...day.sleepBlocks.filter(b => b.end   > DAY_FRAC),
+                  ...nxt.sleepBlocks
+                    .filter(b => b.start < DAY_FRAC)
+                    .map(b => ({ start: b.start + 1, end: Math.min(b.end, DAY_FRAC) + 1 })),
+                ],
+                feeds: [
+                  ...day.feeds.filter(f => f.frac >= DAY_FRAC),
+                  ...nxt.feeds.filter(f => f.frac  < DAY_FRAC).map(f => ({ ...f, frac: f.frac + 1 })),
+                ],
+                diapers: [
+                  ...day.diapers.filter(x => x.frac >= DAY_FRAC),
+                  ...nxt.diapers.filter(x => x.frac  < DAY_FRAC).map(x => ({ ...x, frac: x.frac + 1 })),
+                ],
+              };
+
+              return <DayColumn key={d} day={combined} />;
+            })}
           </div>
         </div>
       </div>
