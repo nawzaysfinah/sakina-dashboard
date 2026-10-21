@@ -10,6 +10,35 @@ const MIN_R = 38;   // inner ring radius
 const MAX_R = 148;  // outer ring radius
 const BAND  = (MAX_R - MIN_R) / 3;
 
+// Time-of-day ambient colors: 0h (midnight/top) clockwise to 23h.
+// Muted so they frame the data bars without competing.
+const BG_COLORS = [
+  '#03050d', // 0h  midnight
+  '#03050d', // 1h
+  '#05071a', // 2h
+  '#080b28', // 3h  deep night
+  '#0d1040', // 4h  pre-dawn
+  '#1c1858', // 5h  early dawn
+  '#3b2472', // 6h  dawn purple
+  '#6b3e82', // 7h  sunrise purple
+  '#b56840', // 8h  warm sunrise
+  '#8fb8d8', // 9h  morning blue
+  '#6daae0', // 10h
+  '#58a0e8', // 11h
+  '#4e9de8', // 12h noon sky
+  '#58a0e8', // 13h
+  '#6daae0', // 14h
+  '#8fb8d8', // 15h afternoon
+  '#d4a840', // 16h golden hour
+  '#d47030', // 17h late afternoon
+  '#b04030', // 18h sunset
+  '#6a2858', // 19h dusk
+  '#2e1048', // 20h twilight
+  '#160830', // 21h evening
+  '#08051a', // 22h night
+  '#03050d', // 23h deep night
+];
+
 // 0h = top, clockwise
 const toAngle = h => (h / 24) * 2 * Math.PI - Math.PI / 2;
 
@@ -42,10 +71,22 @@ export default function ClockRadial({ data }) {
       </p>
 
       <svg width={SIZE} height={SIZE}>
+        {/* Time-of-day gradient background — 24 wedge slices */}
+        {BG_COLORS.map((color, h) => (
+          <path key={`bg${h}`}
+            d={wedge(CX, CY, 0, MAX_R, toAngle(h), toAngle(h + 1))}
+            fill={color}
+            opacity={0.9}
+          />
+        ))}
+
+        {/* Dark centre mask to preserve donut shape */}
+        <circle cx={CX} cy={CY} r={MIN_R - 1} fill="#030712" />
+
         {/* Background rings */}
         {[1/3, 2/3, 1].map(f => (
           <circle key={f} cx={CX} cy={CY} r={MIN_R + f * (MAX_R - MIN_R)}
-            fill="none" stroke="#1e293b" strokeWidth={1} />
+            fill="none" stroke="#1e293b" strokeWidth={1} opacity={0.6} />
         ))}
         {/* Tick marks every hour */}
         {Array.from({ length: 24 }, (_, h) => {
@@ -84,8 +125,6 @@ export default function ClockRadial({ data }) {
             fill="#7dd3fc" opacity={0.85} />;
         })}
 
-        {/* Centre cap */}
-        <circle cx={CX} cy={CY} r={MIN_R - 1} fill="#030712" />
 
         {/* Hour labels */}
         {HOUR_LABELS.map(({ h, label }) => {
@@ -108,10 +147,12 @@ export default function ClockRadial({ data }) {
         <span><span className="inline-block w-3 h-3 rounded-sm bg-sky-300 mr-1.5 align-middle" />Diaper</span>
       </div>
 
-      <p className="text-xs text-slate-600 text-center max-w-xs">
-        Outer band = sleep minutes · Middle = feed count · Inner = diaper count.<br />
-        Bar length = relative frequency in that hour.
-      </p>
+      <div className="text-xs text-slate-600 text-center space-y-0.5">
+        <p>Outer band = sleep minutes</p>
+        <p>Middle = feed count</p>
+        <p>Inner = diaper count</p>
+        <p>Bar length = relative frequency in that hour</p>
+      </div>
     </div>
   );
 }
